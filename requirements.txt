@@ -1,5 +1,13 @@
 fastapi
 uvicorn
-pandas
-scikit-learn
+pillow
 numpy
+keras
+tensorflow
+scikit-learn
+matplotlib
+pandas
+joblib
+seaborn
+streamlit
+locust
