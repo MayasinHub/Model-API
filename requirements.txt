@@ -2,8 +2,8 @@ fastapi
 uvicorn
 pillow
 numpy
-keras==2.11.0
-tensorflow==2.11.0
+tensorflow==2.14.0
+keras==2.14.0
 scikit-learn
 matplotlib
 pandas
