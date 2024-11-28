@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 # Initialize FastAPI app
 app = FastAPI(
     title="Student Dropout Prediction API",
-    description="API for predicting student dropout based on various features",
+    description="API for predicting student dropout or success based on various features",
 )
 
 # Load the trained model
