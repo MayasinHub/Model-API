@@ -9,5 +9,4 @@ matplotlib
 pandas
 joblib
 seaborn
-streamlit
 locust
