@@ -12,3 +12,4 @@ seaborn
 streamlit
 locust
 pydantic
+python-multipart
