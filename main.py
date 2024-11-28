@@ -5,8 +5,11 @@ from app.prediction import predict
 
 app = FastAPI()
 
-# Load the model on startup
-model = load_model("models/student_dropout_model.pkl")
+# Load the trained model
+try:
+    model = joblib.load("student-predictor.pkl")
+except FileNotFoundError:
+    raise RuntimeError("Model file not found. Ensure 'model.pkl' is in the correct directory.")
 
 @app.post("/predict")
 async def predict_endpoint(features: dict):
