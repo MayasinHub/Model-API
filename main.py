@@ -12,10 +12,10 @@ from starlette.middleware.cors import CORSMiddleware
 # Define FastAPI app
 app = FastAPI()
 
-# Allow cross-origin requests from localhost (or your frontend origin)
+# Allow cross-origin requests from localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Adjust as needed for your frontend
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,23 +32,33 @@ def load_model():
             model = pickle.load(file)
             return model
     except FileNotFoundError:
-        raise RuntimeError(f"Model file {MODEL_PATH} not found.")
+        raise RuntimeError(f"Model file {MODEL_PATH} not found here. Thanks!")
 
 # Load the RandomForest model
 model = load_model()
 
-# Define input schema
+# Define input schema with the updated features
 class StudentData(BaseModel):
-    marital_status: int
-    application_mode: int
-    application_order: int
-    course: int
-    daytime_evening_attendance: int
-    previous_qualification: int
-    nacionality: int
-    unemployment_rate: float
-    inflation_rate: float
-    gdp: float
+    Course: int
+    Daytime_evening_attendance: int
+    Previous_qualification: int
+    Previous_qualification_grade: int
+    Admission_grade: int
+    Educational_special_needs: int
+    Tuition_fees_up_to_date: int
+    Gender: int
+    Scholarship_holder: int
+    Age_at_enrollment: int
+    Curricular_units_1st_sem_evaluations: int
+    Curricular_units_1st_sem_approved: int
+    Curricular_units_1st_sem_grade: int
+    Curricular_units_1st_sem_without_evaluations: int
+    Curricular_units_2nd_sem_credited: int
+    Curricular_units_2nd_sem_enrolled: int
+    Curricular_units_2nd_sem_evaluations: int
+    Curricular_units_2nd_sem_approved: int
+    Curricular_units_2nd_sem_grade: int
+    Curricular_units_2nd_sem_without_evaluations: int
 
 @app.post("/predict/")
 def predict_student_status(data: StudentData):
@@ -92,9 +102,9 @@ def retrain_model(file: UploadFile = File(...)):
 
         # Evaluate accuracy
         accuracy = accuracy_score(testY, model.predict(testX))
-        return {"message": "Model retrained successfully", "accuracy": accuracy}
+        return {"message": "Model retrained successfully!!!", "accuracy": accuracy}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Sorry! Retraining failed: {str(e)}")
 
 @app.get("/download_model/")
 def download_model():
@@ -106,4 +116,4 @@ def download_model():
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {"message": "Welcome to the Student Dropout Prediction API"}
+    return {"message": "Welcome to the Student Dropout or Success Prediction API"}
