@@ -12,7 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 # Define FastAPI app
 app = FastAPI()
 
-# Allow cross-origin requests from localhost
+# Allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -25,19 +25,30 @@ app.add_middleware(
 MODEL_PATH = "student-predictor.pkl"
 DATASET_PATH = "student-data.csv"
 
+# Global variable to hold the expected features
+expected_features = []
+
 # Load the initial model
 def load_model():
     try:
         with open(MODEL_PATH, "rb") as file:
             model = pickle.load(file)
+
+            # Extract feature names from the trained model
+            if hasattr(model, "feature_names_in_"):
+                global expected_features
+                expected_features = model.feature_names_in_.tolist()  # This ensures exact feature order
+            else:
+                raise RuntimeError("Sorry! feature names are not available in the saved model.")
+
             return model
     except FileNotFoundError:
-        raise RuntimeError(f"Model file {MODEL_PATH} not found here. Thanks!")
+        raise RuntimeError(f"Model file {MODEL_PATH} not found.")
 
 # Load the RandomForest model
 model = load_model()
 
-# Define input schema with the updated features
+# Define input schema
 class StudentData(BaseModel):
     Course: int
     Daytime_evening_attendance: int
@@ -66,6 +77,10 @@ def predict_student_status(data: StudentData):
     try:
         # Convert input data to DataFrame
         input_data = pd.DataFrame([data.dict()])
+
+        # Reorder input data to match the model's expected feature names
+        input_data = input_data.reindex(columns=expected_features, fill_value=0)
+
         # Make a prediction
         prediction = model.predict(input_data)
         status_mapping = {0: "Dropout", 1: "Graduate", 2: "Enrolled"}
@@ -81,30 +96,32 @@ def retrain_model(file: UploadFile = File(...)):
     try:
         # Load new dataset
         new_data = pd.read_csv(file.file)
+
+        # Ensure "Target" column exists
         if "Target" not in new_data.columns:
             raise HTTPException(status_code=400, detail="Dataset must include 'Target' column.")
 
-        # Split data into features and target
-        X = new_data.drop("Target", axis=1)
+        # Align the new dataset to match the original feature names
+        X = new_data.drop("Target", axis=1).reindex(columns=expected_features, fill_value=0)
         y = new_data["Target"]
 
         # Train/test split
         trainX, testX, trainY, testY = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Train the RandomForest model
+        # Retrain the model
         global model
         model = RandomForestClassifier(n_estimators=100, random_state=42)
         model.fit(trainX, trainY)
 
         # Save the retrained model
-        with open(MODEL_PATH, "wb") as file:
-            pickle.dump(model, file)
+        with open(MODEL_PATH, "wb") as model_file:
+            pickle.dump(model, model_file)
 
         # Evaluate accuracy
         accuracy = accuracy_score(testY, model.predict(testX))
-        return {"message": "Model retrained successfully!!!", "accuracy": accuracy}
+        return {"message": "Model retrained successfully", "accuracy": accuracy}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sorry! Retraining failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
 
 @app.get("/download_model/")
 def download_model():
@@ -116,4 +133,4 @@ def download_model():
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {"message": "Welcome to the Student Dropout or Success Prediction API"}
+    return {"message": "Karibu! Welcome to the Student Dropout and Success Prediction API"}
