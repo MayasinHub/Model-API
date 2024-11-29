@@ -12,10 +12,10 @@ from starlette.middleware.cors import CORSMiddleware
 # Define FastAPI app
 app = FastAPI()
 
-# Allow cross-origin requests from localhost (or your frontend origin)
+# Allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Adjust for your frontend origin
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,9 +107,9 @@ def retrain_model(file: UploadFile = File(...)):
         with open(MODEL_PATH, "wb") as model_file:
             pickle.dump(model, model_file)
 
-        return {"message": "Model retrained successfully", "accuracy": accuracy, "classification_report": report}
+        return {"message": "Asante! Model retrained successfully", "accuracy": accuracy, "classification_report": report}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Sorry! Retraining failed: {str(e)}")
 
 @app.get("/download_model/")
 def download_model():
@@ -121,4 +121,4 @@ def download_model():
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {"message": "Welcome to the Student Dropout and Success Prediction API"}
+    return {"message": "Karibu! Welcome to the Student Dropout and Success Prediction API"}
