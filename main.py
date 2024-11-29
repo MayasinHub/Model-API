@@ -25,14 +25,17 @@ app.add_middleware(
 MODEL_PATH = "student-predictor.pkl"
 ENCODER_PATH = "label-encoder.pkl"
 
+# Global variables for the model and label encoder
+global model, label_encoder
+
 # Load the model and label encoder
 def load_model_and_encoder():
     try:
         with open(MODEL_PATH, "rb") as model_file:
-            model = pickle.load(model_file)
+            loaded_model = pickle.load(model_file)
         with open(ENCODER_PATH, "rb") as encoder_file:
-            encoder = pickle.load(encoder_file)
-        return model, encoder
+            loaded_encoder = pickle.load(encoder_file)
+        return loaded_model, loaded_encoder
     except FileNotFoundError:
         raise RuntimeError(f"Model or encoder file not found at {MODEL_PATH} or {ENCODER_PATH}.")
 
@@ -82,6 +85,7 @@ def predict_student_status(data: StudentData):
 @app.post("/retrain/")
 def retrain_model(file: UploadFile = File(...)):
     """Retrain the model with new data."""
+    global model, label_encoder
     try:
         # Load new dataset
         new_data = pd.read_csv(file.file)
@@ -93,7 +97,6 @@ def retrain_model(file: UploadFile = File(...)):
         y = new_data["Target"]
 
         # Encode target labels
-        global label_encoder
         label_encoder = pickle.load(open(ENCODER_PATH, "rb"))  # Reuse existing encoder
         y_encoded = label_encoder.transform(y)
 
@@ -104,7 +107,6 @@ def retrain_model(file: UploadFile = File(...)):
         trainX, testX, trainY, testY = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
 
         # Retrain the model
-        global model
         model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
         model.fit(trainX, trainY)
 
@@ -130,4 +132,4 @@ def download_model():
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {"message": "Welcome to the Student Dropout and success Prediction API"}
+    return {"message": "Welcome to the Student Dropout and Success Prediction API"}
