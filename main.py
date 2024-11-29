@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
@@ -24,6 +24,8 @@ app.add_middleware(
 # Paths to model and encoder files
 MODEL_PATH = "student-predictor.pkl"
 ENCODER_PATH = "label-encoder.pkl"
+TRAIN_CSV_PATH = "X_train_standardized.csv"
+TEST_CSV_PATH = "X_test_standardized.csv"
 
 # Global variables for the model and label encoder
 global model, label_encoder
@@ -41,30 +43,18 @@ def load_model_and_encoder():
 
 model, label_encoder = load_model_and_encoder()
 
-# Define input schema
-class StudentData(BaseModel):
-    Course: int
-    Daytime_evening_attendance: int
-    Previous_qualification: int
-    Previous_qualification_grade: float
-    Admission_grade: float
-    Educational_special_needs: int
-    Tuition_fees_up_to_date: int
-    Gender: int
-    Scholarship_holder: int
-    Age_at_enrollment: int
-    Curricular_units_1st_sem_credited: int
-    Curricular_units_1st_sem_enrolled: int
-    Curricular_units_1st_sem_evaluations: int
-    Curricular_units_1st_sem_approved: int
-    Curricular_units_1st_sem_grade: float
-    Curricular_units_1st_sem_without_evaluations: int
-    Curricular_units_2nd_sem_credited: int
-    Curricular_units_2nd_sem_enrolled: int
-    Curricular_units_2nd_sem_evaluations: int
-    Curricular_units_2nd_sem_approved: int
-    Curricular_units_2nd_sem_grade: float
-    Curricular_units_2nd_sem_without_evaluations: int
+# Load standardized training data to get feature names
+try:
+    standardized_train_data = pd.read_csv(TRAIN_CSV_PATH)
+    feature_columns = standardized_train_data.columns.tolist()
+except FileNotFoundError:
+    raise RuntimeError(f"Standardized train CSV file not found at {TRAIN_CSV_PATH}.")
+
+# Dynamically create Pydantic model for the input data
+StudentData = create_model(
+    "StudentData",
+    **{col: (float, ...) for col in feature_columns}  # All fields are required and of type float
+)
 
 @app.post("/predict/")
 def predict_student_status(data: StudentData):
@@ -72,7 +62,7 @@ def predict_student_status(data: StudentData):
     try:
         # Convert input data to DataFrame
         input_data = pd.DataFrame([data.dict()])
-        input_data = input_data.reindex(columns=model.feature_names_in_, fill_value=0)
+        input_data = input_data.reindex(columns=feature_columns, fill_value=0)
 
         # Make prediction
         prediction = model.predict(input_data)
@@ -96,12 +86,11 @@ def retrain_model(file: UploadFile = File(...)):
         X = new_data.drop("Target", axis=1)
         y = new_data["Target"]
 
-        # Encode target labels
-        label_encoder = pickle.load(open(ENCODER_PATH, "rb"))  # Reuse existing encoder
-        y_encoded = label_encoder.transform(y)
-
         # Align features with the model
-        X = X.reindex(columns=model.feature_names_in_, fill_value=0)
+        X = X.reindex(columns=feature_columns, fill_value=0)
+
+        # Encode target labels
+        y_encoded = label_encoder.transform(y)
 
         # Split data into train and test sets
         trainX, testX, trainY, testY = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
